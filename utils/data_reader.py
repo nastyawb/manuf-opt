@@ -133,7 +133,7 @@ class Reader:
                self.structure, self.order_graph, self.movement_time
 
 
-# if __name__ == '__main__':
-#     reader = Reader()
-#     reader.transform_df_to_dict()
-#     print(reader.movement_time)
+if __name__ == '__main__':
+    reader = Reader()
+    reader.transform_df_to_dict()
+    print(reader.switch_time)
