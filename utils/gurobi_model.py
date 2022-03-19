@@ -94,7 +94,7 @@ class GRBModel:
         for from_subord in self.subord_id:
             for to_subord in self.subord_id:
                 for equip in self.equip_id:
-                    if from_subord != to_subord and equip in self.subprod[self.suborder_subproduct_map[from_subord]].keys() \
+                    if from_subord != to_subord and self.equip[equip] == 0 and equip in self.subprod[self.suborder_subproduct_map[from_subord]].keys() \
                             and equip in self.subprod[self.suborder_subproduct_map[to_subord]].keys():
                         self.model.addConstr(self.c[from_subord]
                                              + self.eps[to_subord, equip] * self.switch_time[self.suborder_subproduct_map[to_subord]][equip]

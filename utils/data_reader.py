@@ -21,6 +21,11 @@ def transform_df_to_dict_subproduct(subpr) -> dict:
     res = {int(subpr_id): value for key, value in subpr.items() for subpr_id in key.split('_') if subpr_id.isdigit()}
     for key, value in res.items():
         res[key] = {int(eq_id): info for eq_ids, info in value.items() for eq_id in eq_ids.split('_') if eq_id.isdigit()}
+
+    # for key, value in res.items():
+    #     for suborder, info in value.items():
+    #         info['duration, min'] += 400
+
     return res
 
 
