@@ -71,6 +71,16 @@ class Data:
         for subprod_id, info in self.switch_time.items():
             if subprod_id in self.relevant_subprod_id:
                 relevant_switch_time[subprod_id] = {equip_id: duration for equip_id, duration in info.items() if equip_id in self.relevant_equip_id}
+        for subprod_id in self.relevant_subprod_id:
+            for equip_id in self.relevant_equip_id:
+                if subprod_id not in relevant_switch_time.keys() or (equip_id not in relevant_switch_time[subprod_id].keys()
+                                                                     and equip_id in self.subprod[subprod_id].keys()):
+                    relevant_switch_time[subprod_id] = {equip_id: 1000}
+        for subprod_id, subprod_info in self.subprod.items():
+            for equip_id in subprod_info.keys():
+                for s_id, sw_info in relevant_switch_time.items():
+                    if equip_id not in sw_info.keys() and s_id == subprod_id and self.equip[equip_id] == 1:
+                        relevant_switch_time[s_id][equip_id] = 0
         return relevant_switch_time
 
     def get_relevant_movement_time(self):
@@ -79,18 +89,25 @@ class Data:
             if subprod_id in self.relevant_subprod_id:
                 relevant_movement_time[subprod_id] = {(eq_i, eq_j): duration for (eq_i, eq_j), duration in info.items()
                                                       if eq_i in self.relevant_equip_id and eq_j in self.relevant_equip_id and eq_i != eq_j}
+        for subprod_id in self.relevant_subprod_id:
+            if subprod_id not in relevant_movement_time.keys():
+                relevant_movement_time[subprod_id] = {(equip_1, equip_2): 1000 for equip_1 in self.relevant_equip_id
+                                                      for equip_2 in self.relevant_equip_id if equip_1 != equip_2}
+        for subprod_id in relevant_movement_time.keys():
+            relevant_movement_time[subprod_id] = {(equip_1, equip_2): 1000 for equip_1 in self.relevant_equip_id for equip_2 in self.relevant_equip_id}
         return relevant_movement_time
 
 
 if __name__ == '__main__':
     data = Data()
-    print(sorted(data.relevant_suborder_id))
-    print(data.relevant_order_graph)
-    print(sorted(data.relevant_subprod_id))
-    print(sorted(data.relevant_equip_id))
-    print(data.relevant_subprod)
-    print(data.relevant_switch_time)
-    print(data.relevant_equip)
-    print(data.relevant_movement_time)
-
-
+    print(data.relevant_equip_id)
+    print(data.relevant_subprod_id)
+    print(data.relevant_switch_time[1641])
+    # print(sorted(data.relevant_suborder_id))
+    # print(data.relevant_order_graph)
+    # print(sorted(data.relevant_subprod_id))
+    # print(sorted(data.relevant_equip_id))
+    # print(data.relevant_subprod)
+    # print(data.relevant_switch_time)
+    # print(data.relevant_equip)
+    # print(data.relevant_movement_time)
