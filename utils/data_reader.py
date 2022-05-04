@@ -21,11 +21,6 @@ def transform_df_to_dict_subproduct(subpr) -> dict:
     res = {int(subpr_id): value for key, value in subpr.items() for subpr_id in key.split('_') if subpr_id.isdigit()}
     for key, value in res.items():
         res[key] = {int(eq_id): info for eq_ids, info in value.items() for eq_id in eq_ids.split('_') if eq_id.isdigit()}
-
-    # for key, value in res.items():
-    #     for suborder, info in value.items():
-    #         info['duration, min'] += 400
-
     return res
 
 
@@ -116,8 +111,7 @@ def transform_df_to_dict_movement_time(move_time) -> dict:
 
 class Reader:
 
-    def __init__(self):
-        # reading info from the lists
+    def __init__(self):  # считывание данных из excel
         self.equipment = pd.read_excel(input_file_name, sheet_name='equipment').iloc[:, 1:]
         self.subproduct = pd.read_excel(input_file_name, sheet_name='subproduct').iloc[:, 1:]
         self.switch_time = pd.read_excel(input_file_name, sheet_name='switch_time').iloc[:, 1:]
@@ -126,7 +120,7 @@ class Reader:
         self.order_graph = pd.read_excel(input_file_name, sheet_name='order_graph').iloc[:, 1:]
         self.movement_time = pd.read_excel(input_file_name, sheet_name='movement_time').iloc[:, 1:]
 
-    def transform_df_to_dict(self):
+    def transform_df_to_dict(self):  # преобразование входных данных
         self.equipment = transform_df_to_dict_equipment(self.equipment)
         self.subproduct = transform_df_to_dict_subproduct(self.subproduct)
         self.switch_time = transform_df_to_dict_switch_time(self.switch_time)
@@ -134,8 +128,7 @@ class Reader:
         self.structure = transform_df_to_dict_structure(self.structure)
         self.order_graph = transform_df_to_dict_order_graph(self.order_graph)
         self.movement_time = transform_df_to_dict_movement_time(self.movement_time)
-        return self.equipment, self.subproduct, self.switch_time, self.orders,\
-               self.structure, self.order_graph, self.movement_time
+        return self.equipment, self.subproduct, self.switch_time, self.orders, self.structure, self.order_graph, self.movement_time
 
 
 if __name__ == '__main__':

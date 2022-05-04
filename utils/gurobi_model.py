@@ -3,17 +3,17 @@ from gurobipy import (GRB,
                       quicksum)
 from utils.data_reader import Reader
 from utils.relevant_data_getter import Data
-from configs import bigM, deadline
+from configs import (bigM,
+                     deadline)
 
 
 class GRBModel:
 
     def __init__(self):
-
         self.reader = Reader()
         self.data = Data()
 
-        self.equip = self.data.relevant_equip
+        self.equip = self.data.relevant_equip  # получение релевантных данных
         self.subprod = self.data.relevant_subprod
         self.switch_time = self.data.relevant_switch_time
         self.orders = self.data.orders
@@ -27,7 +27,7 @@ class GRBModel:
         self.movement_time = self.data.relevant_movement_time
 
         self.model = Model('manuf-opt')
-        self.eps = {}
+        self.eps = {}  # инициализация переменных оптимизационной модели
         self.b = {}
         self.c = {}
         self.gamma = {}
@@ -35,7 +35,7 @@ class GRBModel:
         self.delta = {}
         self.obj = 0
 
-    def add_vars(self):
+    def add_vars(self):  # добавление переменных в модель
         for subord in self.subord_id:
             self.b[subord] = self.model.addVar(vtype=GRB.CONTINUOUS, lb=0.0, name=f'b_{subord}')
             self.c[subord] = self.model.addVar(vtype=GRB.CONTINUOUS, lb=0.0, name=f'c_{subord}')
@@ -58,26 +58,28 @@ class GRBModel:
                             and equip in self.subprod[self.suborder_subproduct_map[to_subord]].keys():
                         self.delta[from_subord, to_subord, equip] = self.model.addVar(vtype=GRB.BINARY,
                                                                                       name=f'delta_{from_subord}_{to_subord}_{equip}')
-        # self.mu = self.model.addVars(self.subord_id, self.subord_id, vtype=GRB.BINARY, name='mu')
 
-    def add_subprod_constrs(self):
+    def add_subprod_constrs(self):  # добавление ограничений на полуфабрикат
         for subord in self.subord_id:
+            # ограничение (1.7)-(1.8)
             self.model.addConstr((quicksum(self.eps[subord, h] for h in self.subprod[self.suborder_subproduct_map[subord]].keys()) == 1),
                                  name=f'suborder{subord}_can_be_processed_only_once')
+            # ограничение (1.9)
             self.model.addConstr(
                 self.b[subord] + quicksum(self.eps[subord, h] * self.subprod[self.suborder_subproduct_map[subord]][h]['duration, min']
                                           for h in self.subprod[self.suborder_subproduct_map[subord]].keys()) == self.c[subord],
                 name=f'suborder{subord}___start_time_+_processing_time_=_end_time')
 
-    def add_order_constrs(self):
+    def add_order_constrs(self):  # добавление ограничений на заказ
         for from_subord in self.subord_id:
             for to_subord in self.subord_id:
                 if from_subord != to_subord and from_subord in self.order_graph.keys() and to_subord in self.order_graph[from_subord]:
+                    # ограничение (1.10)-(1.11)
                     self.model.addConstr(quicksum(self.gamma[from_subord, h, to_subord, p]
                                                   for h in self.subprod[self.suborder_subproduct_map[from_subord]].keys()
                                                   for p in self.subprod[self.suborder_subproduct_map[to_subord]].keys()) == 1,
                                          name=f'after_suborder{from_subord}_suborder{to_subord}_can_be_processed_only_once')
-
+                    # ограничение (1.12)
                     self.model.addConstr(self.c[from_subord] + quicksum(self.gamma[from_subord, h, to_subord, p]
                                                                         * self.movement_time[self.suborder_subproduct_map[from_subord]][(h, p)]
                                                                         for h in self.subprod[self.suborder_subproduct_map[from_subord]].keys()
@@ -87,15 +89,17 @@ class GRBModel:
                                          name=f'start_subord{to_subord}_=_end_subord{from_subord}_+_move_subord{from_subord}'
                                               f'+_switch_subord{to_subord}')
         for final_subord in self.final_subord_id:
+            # ограничение (1.13)-(1.14)
             self.model.addConstr(self.c[final_subord] <= deadline + bigM * (1 - self.ksi[final_subord]),
                                  name=f'final_suborder{final_subord}_processing_finished_before_deadline')
 
-    def add_equip_constrs(self):
+    def add_equip_constrs(self):  # добавление ограничений на оборудование
         for from_subord in self.subord_id:
             for to_subord in self.subord_id:
                 for equip in self.equip_id:
                     if from_subord != to_subord and self.equip[equip] == 0 and equip in self.subprod[self.suborder_subproduct_map[from_subord]].keys() \
                             and equip in self.subprod[self.suborder_subproduct_map[to_subord]].keys():
+                        # ограничение (1.15)-(1.16)
                         self.model.addConstr(self.c[from_subord]
                                              + self.eps[to_subord, equip] * self.switch_time[self.suborder_subproduct_map[to_subord]][equip]
                                              <= self.b[to_subord] + bigM * self.delta[from_subord, to_subord, equip],
@@ -105,13 +109,13 @@ class GRBModel:
                                              <= self.b[from_subord] + bigM * (1 - self.delta[from_subord, to_subord, equip]),
                                              name=f'start_subord{from_subord} = end_subord{to_subord}_+_switch_subord{from_subord}')
 
-    def set_objective_function(self):
+    def set_objective_function(self):  # постановка целевой функции
         for order, info in self.orders.items():
             for final_suborder in info.keys():
                 self.obj += self.orders[order][final_suborder]['price'] * self.ksi[final_suborder]
         self.model.setObjective(self.obj, GRB.MAXIMIZE)
 
-    def optimize_model(self):
+    def optimize_model(self):  # оптимизация модели
         self.add_vars()
         self.model.update()
         self.add_subprod_constrs()
@@ -119,6 +123,8 @@ class GRBModel:
         self.add_equip_constrs()
         self.set_objective_function()
         self.model.write('model.lp')
+        self.model.setParam("TimeLimit", 180.0)
+        # self.model.setParam("MIPgap", 0.1)
         self.model.optimize()
 
 
@@ -129,4 +135,3 @@ if __name__ == '__main__':
         print(grbm.eps)
         print(grbm.b)
         print(grbm.c)
-
